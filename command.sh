@@ -53,7 +53,7 @@ if [ -z "$YOUR_PRIVATE_KEY" ]; then
     exit 1
 fi
 
-docker run -d -e PRIVATE_KEY=$YOUR_PRIVATE_KEY --name glacier-verifier3 docker.io/glaciernetwork/glacier-verifier:v0.0.1
+docker run -d -e PRIVATE_KEY=$YOUR_PRIVATE_KEY --name glacier-verifier3 docker.io/glaciernetwork/glacier-verifier1:v0.0.1
 
 # Display thank you message
 echo "==================================="
