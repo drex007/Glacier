@@ -44,16 +44,41 @@ else
     echo -e "${SUCCESS}Docker Compose is already installed.${NC}"
 fi
 
-# Start the Docker container
-echo -e "${INFO}Make sure to claim the Faucet before starting the container.${NC}"
-read -p "Enter your EVM PRIVATE KEY: " YOUR_PRIVATE_KEY
+# Ask user for the list of private keys
+echo -e "${INFO}Make sure to claim the Faucet before starting the containers.${NC}"
+echo -e "${YELLOW}Enter the private keys (comma-separated) for each instance.${NC}"
+read -p "Enter your EVM PRIVATE KEYS: " PRIVATE_KEYS
 
-if [ -z "$YOUR_PRIVATE_KEY" ]; then
-    echo -e "${ERROR}Private Key is required to proceed. Exiting.${NC}"
+# Split the keys into a list
+IFS=',' read -r -a KEYS <<< "$PRIVATE_KEYS"
+
+if [ ${#KEYS[@]} -eq 0 ]; then
+    echo -e "${ERROR}At least one Private Key is required to proceed. Exiting.${NC}"
     exit 1
 fi
 
-docker run -d -e PRIVATE_KEY=$YOUR_PRIVATE_KEY --name glacier-verifier3 docker.io/glaciernetwork/glacier-verifier1:v0.0.1
+# Run the Docker container for each key
+for i in "${!KEYS[@]}"; do
+    KEY=${KEYS[$i]}
+    CONTAINER_NAME="glacier-verifier-$((i + 1))"
+
+    # Check if a container with the same name already exists
+    if [ "$(docker ps -aq -f name=$CONTAINER_NAME)" ]; then
+        TIMESTAMP=$(date +%Y%m%d%H%M%S)
+        NEW_NAME="${CONTAINER_NAME}-old-$TIMESTAMP"
+        echo -e "${WARNING}Container with name $CONTAINER_NAME already exists. Renaming it to $NEW_NAME...${NC}"
+        docker rename "$CONTAINER_NAME" "$NEW_NAME"
+    fi
+
+    echo -e "${INFO}Starting container for key $((i + 1)) with name $CONTAINER_NAME...${NC}"
+    docker run -d -e PRIVATE_KEY="$KEY" --name "$CONTAINER_NAME" docker.io/glaciernetwork/glacier-verifier:v0.0.1
+
+    if [ $? -eq 0 ]; then
+        echo -e "${SUCCESS}Container $CONTAINER_NAME started successfully.${NC}"
+    else
+        echo -e "${ERROR}Failed to start container $CONTAINER_NAME.${NC}"
+    fi
+done
 
 # Display thank you message
 echo "==================================="
